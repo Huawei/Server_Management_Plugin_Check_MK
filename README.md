@@ -16,7 +16,7 @@ II. Description
 
 III.Supported Software Version
 
-    check_MK 1.2.8p26
+    Check_MK 1.2.8p26
     
 IV.Software Requirements
 
