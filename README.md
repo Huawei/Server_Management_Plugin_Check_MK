@@ -6,13 +6,13 @@ Check_MK Manager,Monitoring Management Plugin Pack for Huawei Server
 
 I. General Information
 
-    Name:     Management Plugin Pack for Huawei Server
+    Name:     Check_MK Plugin for Huawei Server
     Category: Monitoring
     Version:  1.0.2
 
 II. Description
 
-    This is a check_MK plugin for monitoring huawei servers  
+    This is a check_MK plugin for monitoring Huawei Server 
 
 III.Supported Software Version
 
@@ -20,7 +20,7 @@ III.Supported Software Version
     
 IV.Software Requirements
 
-    Nagios plugin for Huawei Server
+    Nagios Plugin for Huawei Server
     https://github.com/Huawei/Server_Management_Plugin_Nagios
     
 V.Supported Device
