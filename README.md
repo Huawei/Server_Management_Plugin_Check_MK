@@ -1,7 +1,7 @@
 # Server_Management_Plugin_Check_MK
 
 ****************************************************************************
-Check_MK Manager,Monitoring Management Plugin Pack for Huawei Server
+Check_MK Plugin Pack for Huawei Server
 ****************************************************************************
 
 I. General Information
@@ -31,4 +31,4 @@ V.Supported Device
     
 VI. Additional Resources
 
-    For more information consult User Guide. https://github.com/Huawei/Server_Management_Plugin_Check_MK/docs
+    For more information consult User Guide. https://github.com/Huawei/Server_Management_Plugin_Check_MK/tree/master/docs
