@@ -10,12 +10,11 @@ import commands
 import re
 import sys
 
+# modify by fangzhengbo at 2018.02.24
+# for find nagios dir through /etc/profile
 def find_nagiosdir():
     '''return nagios directory'''
-    cmd = "ps ax -o command | grep -E 'icinga.cfg|nagios.cfg' | grep -v 'grep'"
+    cmd = "source /etc/profile;echo $NAGIOSHOME"
     procs = commands.getoutput(cmd)
-    if re.search('(/[^ ]+)/bin/nagios', procs):
-        nagiosdir = re.search('(/.+)/bin/nagios', procs).group(1)
-        return nagiosdir
-    else:
-        sys.exit(0)
+
+    return procs

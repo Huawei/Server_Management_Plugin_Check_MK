@@ -26,36 +26,6 @@ from pysnmp.entity.rfc3413.oneliner.cmdgen import usmHMACSHAAuthProtocol
 from pysnmp.entity.rfc3413.oneliner.cmdgen import usmAesCfb128Protocol
 from pysnmp.entity.rfc3413.oneliner import cmdgen
 
-MODULES_DIR = os.path.dirname(__file__)
-import find_nagois_dir 
-NAGIOS_DIR = find_nagois_dir.find_nagiosdir()
-if NAGIOS_DIR: 
-    if not os.path.exists(NAGIOS_DIR + "/bin/huawei_server/cmkGenKey.py"):
-        commands.getoutput("cp " \
-                          + NAGIOS_DIR + "/bin/huawei_server/genKey.py " \
-                          + NAGIOS_DIR + "/bin/huawei_server/cmkGenKey.py")
-    commands.getoutput("sed -i 's?../../etc?" \
-                          + NAGIOS_DIR + "/etc?g' " \
-                          + NAGIOS_DIR + "/bin/huawei_server/cmkGenKey.py")
-    from sys import path
-    path.append(str(NAGIOS_DIR) + "/bin/huawei_server/")
-    from cmkGenKey import genRootKeyStr, dencryptKey, readKey, encryptKey
-
-if not os.path.exists(MODULES_DIR + "/cmk_base_for_huawei.py"):
-    commands.getoutput("cat " \
-      + MODULES_DIR \
-      + "/check_mk.py  | " \
-      + "sed -n '/#!\/usr\/bin\/python/,/opt_inv_fail_status = int(a)/{p}' > " \
-      + MODULES_DIR + "/cmk_base_for_huawei.py")
-if os.path.exists(MODULES_DIR + "/cmk_base_for_huawei.py"):
-    execfile(MODULES_DIR + '/cmk_base_for_huawei.py')
-
-# Conveniance macros for host and service rules
-ALL_HOSTS = [ '@all' ]      # physical and cluster hosts
-NEGATE  = '@negate'       # negation in boolean lists
-GLOABLE_HOSTS = []
-GLOABLE_IPS   = []
-
 # add logs file
 DATE = datetime.now()
 LOGFILE = 'hwconfiguration_' + DATE.strftime('%Y-%m-%d') + '.log' 
@@ -88,6 +58,39 @@ LOGGER.addHandler(CONSOLEHANDLER)
 LOGGER.addHandler(FILEHANDLER)
 LOGGER.addHandler(ERRORFILEHANDLER)
 
+MODULES_DIR = os.path.dirname(__file__)
+import find_nagois_dir 
+NAGIOS_DIR = find_nagois_dir.find_nagiosdir()
+import commands
+def __find_ckmkVersion():
+    '''return checkmk version '''
+    cmd = "source /etc/profile;echo $NAGIOS_CHECKMK_VERSION"
+    procs = commands.getoutput(cmd)
+    return procs 
+
+
+if NAGIOS_DIR: 
+    from sys import path
+    path.insert(0,str(NAGIOS_DIR) + "/bin/huawei_server")
+    from config import ConfigHandler
+    from genKey import genRootKeyStr, dencryptKey, readKey, encryptKey
+else:
+    LOGGER.error("nagios dir does not exist! please check nagios plugin install successful or not! ")
+
+if not os.path.exists(MODULES_DIR + "/cmk_base_for_huawei.py"):
+    commands.getoutput("cat " \
+      + MODULES_DIR \
+      + "/check_mk.py  | " \
+      + "sed -n '1,/opt_inv_fail_status = int(a)/{p}' > " \
+      + MODULES_DIR + "/cmk_base_for_huawei.py")
+if os.path.exists(MODULES_DIR + "/cmk_base_for_huawei.py"):
+    execfile(MODULES_DIR + '/cmk_base_for_huawei.py')
+
+# Conveniance macros for host and service rules
+ALL_HOSTS = [ '@all' ]      # physical and cluster hosts
+NEGATE  = '@negate'       # negation in boolean lists
+GLOABLE_HOSTS = []
+GLOABLE_IPS   = []
 
 def checkEnv():
     '''
@@ -99,6 +102,7 @@ def checkEnv():
         LOGGER.error("Nogios is not running,please start first")
         sys.exit()
     # check if host is monitored by cmk
+
     if only_hosts:
         i = 0
         ismonitor = 'Y'
@@ -136,10 +140,16 @@ about huawei server in folder,please set only_hosts in \
         commands.getoutput("sudo cp " \
                            + MODULES_DIR + "/huawei_server/hw_server.cfg " \
                            + NAGIOS_DIR + "/etc/huawei_server/")
-        commands.getoutput("sudo chown nagios.nagios " \
-            + NAGIOS_DIR + "/etc/huawei_server/hw_server.cfg")
-        commands.getoutput("sudo chown nagios.nagios " \
-            + NAGIOS_DIR + "/etc/huawei_server/huawei_hosts.xml")
+        if not (__find_ckmkVersion() == "1_4" or __find_ckmkVersion() == "1_5"):                 
+            commands.getoutput("sudo chown nagios.nagios " \
+                + NAGIOS_DIR + "/etc/huawei_server/hw_server.cfg")
+            commands.getoutput("sudo chown nagios.nagios " \
+                + NAGIOS_DIR + "/etc/huawei_server/huawei_hosts.xml")
+        else:
+            commands.getoutput("sudo chown prod.prod " \
+                + NAGIOS_DIR + "/etc/huawei_server/hw_server.cfg")
+            commands.getoutput("sudo chown prod.prod " \
+                + NAGIOS_DIR + "/etc/huawei_server/huawei_hosts.xml")      
         LOGGER.error("no found snmp credential,please create snmp credential! ")
         sys.exit()
 
@@ -157,6 +167,10 @@ def encrypt(pkey, folder):
     ' input:password/community,hosts folder
     ' return encryption password
     '''
+    if not (__find_ckmkVersion() == "1_4" or __find_ckmkVersion() == "1_5"): 
+        _check_mk_configdir = check_mk_configdir
+    else :
+        _check_mk_configdir = cmk.paths.check_mk_config_dir 
     rootkey = getRootKey()
     if rootkey is None:
         sys.exit()
@@ -166,7 +180,7 @@ def encrypt(pkey, folder):
         # find cmk snmp rule folder,replace password with encryption password
         if folder == 'Main directory' \
         or folder == '':
-            folder_dir = check_mk_configdir + "/wato/rules.mk"
+            folder_dir = _check_mk_configdir + "/wato/rules.mk"
             commands.getoutput("sed -i \"s?'" \
                                + pkey.replace('$', '\$') + "', 'AES',?'" \
                                + encryptpwd + "', 'AES',?g\" " \
@@ -200,7 +214,7 @@ def encrypt(pkey, folder):
                                + "'?'trapSNMPv2', '" + encryptpwd + "'?g\" " \
                                + folder_dir)
         else:
-            folder_dir = check_mk_configdir + "/wato/" + folder + "/rules.mk"
+            folder_dir = _check_mk_configdir + "/wato/" + folder + "/rules.mk"
             commands.getoutput("sed -i \"s?'" \
                          + pkey.replace('$', '\$') + "', 'AES',?'" \
                          + encryptpwd + "', 'AES',?g\" " \
@@ -598,48 +612,6 @@ def getHostAttribute(snmp_community):
         hostattributes.append(trapdic)
     return hostattributes
 
-def getHostServicesContent(devicetype, hostname, hostalias, ipaddress):
-    '''
-    ' get services content by reading
-    ' MODULES_DIR/huawei_server/HDorRack.cfg
-    ' MODULES_DIR/huawei_server/Blade.cfg
-    ' Blade services: alarm
-    ' Rack or HighDensity:alarm,system,fan,cpu,memory,power,hardDisk
-    '''
-    # create a blade tmp file for services configuration for current host
-    if devicetype == 'Blade':
-        commands.getoutput("cat " + MODULES_DIR \
-                 + "/huawei_server/Blade.cfg > /tmp/huaweitmp.cfg")
-    # create a rack or HD tmp file for services configuration for current host
-    if devicetype != 'Blade' and devicetype != '':
-        commands.getoutput("cat " + MODULES_DIR \
-                 + "/huawei_server/HDorRack.cfg > /tmp/huaweitmp.cfg")
-    # update hostname in tmp file
-    if hostname:
-        commands.getoutput("sed -i 's/hostname/" + hostname \
-                 + "/g' /tmp/huaweitmp.cfg")
-    # update hostalias in tmp file
-    if hostalias:
-        commands.getoutput("sed -i 's/hostalias/" + hostalias \
-                 + "/g' /tmp/huaweitmp.cfg")
-    # update ipaddress in tmp file
-    if ipaddress:
-        commands.getoutput("sed -i 's/ipaddress/" + ipaddress \
-                 + "/g' /tmp/huaweitmp.cfg")
-    # get tmp file content about services for host
-    output = commands.getoutput("cat /tmp/huaweitmp.cfg")
-    commands.getoutput("rm -rf /tmp/huaweitmp.cfg")
-    return output
-
-def getListenerContent():
-    '''
-    ' get listener content by reading
-    ' MODULES_DIR/huawei_server/listener.cfg
-    '''
-    output = commands.getoutput("cat " + MODULES_DIR \
-            + "/huawei_server/listener.cfg")
-    return output
-
 def startToConfig():
     '''
     ' Methods startToConfig:
@@ -653,7 +625,7 @@ def startToConfig():
     dom = impl.createDocument(None, 'hosts' , None)
     commands.getoutput("sudo rm -rf " \
             + NAGIOS_DIR + "/etc/huawei_server/hw_server.cfg")
-    servicefile = open(NAGIOS_DIR + "/etc/huawei_server/hw_server.cfg",'w')
+    
     LOGGER.info("start to config ........")
 
     for snmp_community in snmp_communities:
@@ -761,10 +733,7 @@ def startToConfig():
                 hostalias = 'HighDensityDetailsStatus@' + hostname
             elif devtype == 'Blade':
                 hostalias = 'BladeDetailsStatus@' + hostname
-            cfgcontent = \
-            getHostServicesContent(devtype, hostname, hostalias, ipaddress)
-            servicefile.writelines(cfgcontent)
-
+ 
             # config snmp credentials and trap credentials to huawei_host.xml
             # hostname/ipaddress/devicetype/port
             root = dom.documentElement
@@ -851,8 +820,7 @@ def startToConfig():
     xmlfile.close()
 
     #configure for Nagios plugin listener to hw_server.cfg
-    servicefile.writelines(getListenerContent())
-    servicefile.close()
+
 
     if len(GLOABLE_IPS) < 1:
         commands.getoutput("sudo rm -rf " \
@@ -866,12 +834,27 @@ def startToConfig():
                 + MODULES_DIR + "/huawei_server/hw_server.cfg " \
                 + NAGIOS_DIR + "/etc/huawei_server/")
         LOGGER.error("no found vaild hosts! ")
-
-    commands.getoutput("sudo chown nagios.nagios " \
+    #set trap IP ,mode,port 
+  #  Configer=ConfigHandler(None) 
+  #  ret,iplist =Configer.funSetServer()
+  #  if not ret ==0 :
+  #      for i in range(len (iplist)):
+  #          LOGGER.error("set trap ip fail ,IP:%s"%iplist[i]) 
+    #set nagios.cfg file        
+    #Configer.addPlugincfgInNagios()
+    if not (__find_ckmkVersion() == "1_4" or __find_ckmkVersion() == "1_5"): 
+        commands.getoutput("sudo chown nagios.nagios " \
             + NAGIOS_DIR + "/etc/huawei_server/huawei_hosts.xml")
-    commands.getoutput("sudo chown nagios.nagios " \
+        commands.getoutput("sudo chown nagios.nagios " \
             + NAGIOS_DIR + "/etc/huawei_server/hw_server.cfg")
-    commands.getoutput("sudo chown nagios.nagios " \
+        commands.getoutput("sudo chown nagios.nagios " \
+            + MODULES_DIR + "/logsforhuawei/*")
+    else:
+        commands.getoutput("sudo chown prod.prod " \
+            + NAGIOS_DIR + "/etc/huawei_server/huawei_hosts.xml")
+        commands.getoutput("sudo chown prod.prod " \
+            + NAGIOS_DIR + "/etc/huawei_server/hw_server.cfg")
+        commands.getoutput("sudo chown prod.prod " \
             + MODULES_DIR + "/logsforhuawei/*")
     commands.getoutput("sudo chmod 664 " \
             + MODULES_DIR + "/logsforhuawei/*")
@@ -880,4 +863,23 @@ def startToConfig():
     commands.getoutput("sudo chmod 775 " \
             + MODULES_DIR + "/logsforhuawei")
     LOGGER.info("completed!")
-startToConfig()
+
+def huaweiconfigall():
+    #get host from chechmkhuawei and save in huawei_host.xml
+
+    startToConfig()
+    #get info from host.xml and creat a handler to do 
+    Configer=ConfigHandler(None) 
+    #create  nagios object cfg file 
+    Configer.creatConfigfile()
+    #add $USER5$ in nagios sourcefile 
+    Configer.EditSourceFile()
+    #add nagios  ocject cfg file in nagios 
+    Configer.addPlugincfgInNagios()
+    # set trap info in server 
+    ret,iplist =Configer.funSetServer()
+    if not ret ==0 :
+        for i in range(len (iplist)):
+            LOGGER.error("set trap ip fail ,IP:%s"%iplist[i]) 
+    #Configer.restartNagios()
+huaweiconfigall()    

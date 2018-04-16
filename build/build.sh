@@ -7,7 +7,8 @@ cmkdir="$(echo "$SRCDIR" | sed -rn "s/(.+)\/build/\1/gp")"
 rm -rf $cmkdir/releases/* && mkdir -p $cmkdir/releases/cmkplugin_latest &&
 cd $cmkdir/src/modules && tar zcf modulesplugin.tar.gz *.py  huawei_server && mv modulesplugin.tar.gz $cmkdir/releases/cmkplugin_latest/ &&
 chmod a+x $SRCDIR/{setup.sh,uninstall.sh} &&
-cp $SRCDIR/{setup.sh,uninstall.sh} $cmkdir/releases/cmkplugin_latest/ &&
+cp $SRCDIR/{setup.sh,uninstall.sh,setup.py} $cmkdir/releases/cmkplugin_latest/ &&
+cp -rf $SRCDIR/../lib/*  $cmkdir/releases/cmkplugin_latest/ &&
 cd $cmkdir/releases &&
 tar zcf cmkplugin_latest.tar.gz cmkplugin_latest &&
 rm -rf $cmkdir/releases/cmkplugin_latest

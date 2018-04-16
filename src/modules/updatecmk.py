@@ -26,7 +26,38 @@ def updateCmk():
     # Update cmk file: check_mk.py
     cmkfile = open( cmkpath, "r" )  
     cmkstr = cmkfile.read()
-    addstr = '''        # cmkplugin to update Huawei configuration: start.
+    cmkpos = cmkstr.find('''        command = nagios_binary + " -vp "  + nag''')
+    if cmkpos == -1:
+        #for  checkMK v1.4 or v1.5 
+        cmkpos = cmkstr.find('''        command = cmk.paths.nagios_binary + " -vp "''')
+        addstr = '''        # cmkplugin to update Huawei configuration: start.
+        trapCmd = "ps -efww | grep -E 'trapd.py|collect.py' | grep -v grep | awk '{print $2}' 2>&1"
+        trapOutput = os.popen(trapCmd, "r")
+        trapNum = trapOutput.read().strip("\\n").replace("\\n", " ")
+        if trapNum:
+            killCmd = "kill -9 " + trapNum + " 2>&1"
+            killNum = os.popen(killCmd, "r")
+        hwCfgCmd = "python " + cmk.paths.modules_dir + "/huawei_auto_config.py 2>&1"
+        sys.stdout.write("Configuring Huawei configuration...")
+        if ('-v' in sys.argv[1:] or '--verbose' in sys.argv[1:]) and 1 or 0:
+            sys.stderr.write("Running '%s'" % hwCfgCmd)
+        sys.stderr.flush()
+        hwCfgOutput = os.popen(hwCfgCmd, "r")
+        outputRead = hwCfgOutput.read()
+        exit_status4hw = hwCfgOutput.close()
+        if not exit_status4hw:
+            sys.stdout.write(tty.ok+ "\\n")
+            return True
+        else:
+            sys.stdout.write("ERROR:\\n")
+            sys.stderr.write(outputRead)
+            return False
+        # cmkplugin to update Huawei configuration: end.
+'''
+    else :
+        #for checkMK v1.2
+        
+        addstr = '''        # cmkplugin to update Huawei configuration: start.
         trapCmd = "ps -efww | grep -E 'trapd.py|collect.py' | grep -v grep | awk '{print $2}' 2>&1"
         trapOutput = os.popen(trapCmd, "r")
         trapNum = trapOutput.read().strip("\\n").replace("\\n", " ")
@@ -35,21 +66,22 @@ def updateCmk():
             killNum = os.popen(killCmd, "r")
         hwCfgCmd = "python " + modules_dir + "/huawei_auto_config.py 2>&1"
         sys.stdout.write("Configuring Huawei configuration...")
-        if opt_verbose:
-            sys.stderr.write("Running '%s'" % hwCfgCmd)
+        if ('-v' in sys.argv[1:] or '--verbose' in sys.argv[1:]) and 1 or 0:
+            sys.stderr.write("Running '%%s'" % hwCfgCmd)
         sys.stderr.flush()
         hwCfgOutput = os.popen(hwCfgCmd, "r")
         outputRead = hwCfgOutput.read()
         exit_status4hw = hwCfgOutput.close()
         if not exit_status4hw:
             sys.stdout.write(tty_ok + "\\n")
+            return True
         else:
             sys.stdout.write("ERROR:\\n")
             sys.stderr.write(outputRead)
             return False
         # cmkplugin to update Huawei configuration: end.
 '''
-    cmkpos = cmkstr.find('''        command = nagios_binary + " -vp "  + nag''')
+
     if cmkpos != -1:  
         cmkstr = cmkstr[:cmkpos] + addstr + cmkstr[cmkpos:]  
         cmkfile = open( cmkpath, "w" )  

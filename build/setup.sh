@@ -7,9 +7,19 @@ echo "|This is a Check_MK plugin for Huawei Nagios Plugin,It is based on Check_M
 echo "-----------------------------------------------------------------------------------------------"
 
 #SRCDIR=${0%/*}
+source /etc/profile
 SRCDIR=$(cd `dirname $0`; pwd)
 datetime=`date '+%Y-%m-%d %H:%M:%S'`
-modulesdir="$(cmk --path | grep modules | grep 'Main components' |sed -rn "s/.*: (.+)\//\1/gp")"
+siteUsrFilePath=$NAGIOSHOME/etc/huawei_server/usrFile.cfg
+
+
+if [ cmkversion$NAGIOS_CHECKMK_VERSION == cmkversion'1_4' ] || [ cmkversion$NAGIOS_CHECKMK_VERSION == cmkversion'1_5' ]; then 
+    siteUser=`cat $siteUsrFilePath |grep usr |awk -F = '{print $2}'`
+    siteGroup=`cat $siteUsrFilePath |grep group |awk -F = '{print $2}'`
+    modulesdir="/opt/omd/sites/$siteUser/share/check_mk/modules"
+else 
+    modulesdir="$(cmk --path | grep modules | grep 'Main components' |sed -rn "s/.*: (.+)\//\1/gp")"
+fi    
 logs="$modulesdir/logsforhuawei"
 if [ ! -d "$logs" ]
 then
@@ -19,16 +29,29 @@ touch $logs/install.log &&
 chmod 664 $logs/install.log &&
 
 # find cmk config path
-webdir="$(cmk --path | grep "Check_MK's web pages" |sed -rn "s/.*: (.+)\//\1/gp" 2>>$logs/install.log)"
-vardir="$(cmk --path | grep 'Base working directory' |sed -rn "s/.*: (.+)\//\1/gp" 2>>$logs/install.log)"
-confdir="$(cmk --path | grep 'main.mk' |sed -rn "s/.*: (.+)\//\1/gp" 2>>$logs/install.log)"
-
+if [ cmkversion$NAGIOS_CHECKMK_VERSION == cmkversion'1_4' ] || [ cmkversion$NAGIOS_CHECKMK_VERSION == cmkversion'1_5' ]; then 
+    webdir="/opt/omd/sites/$siteUser/share/check_mk/web"
+    vardir="/opt/omd/sites/$siteUser/var/check_mk"
+    confdir="/opt/omd/sites/$siteUser/etc/check"
+else 
+    webdir="$(cmk --path | grep "Check_MK's web pages" |sed -rn "s/.*: (.+)\//\1/gp" 2>>$logs/install.log)"
+    vardir="$(cmk --path | grep 'Base working directory' |sed -rn "s/.*: (.+)\//\1/gp" 2>>$logs/install.log)"
+    confdir="$(cmk --path | grep 'main.mk' |sed -rn "s/.*: (.+)\//\1/gp" 2>>$logs/install.log)"
+fi
 # get nagios dir,user,group
-nagiosdir="$(ps -ef | grep -E 'nagios.cfg|icinga.cfg' | grep -v grep | sed -rn "s/.* (\/.+)\/etc.*/\1/gp" |uniq 2>>$logs/install.log)"
-nagiosfile="$nagiosdir/bin/nagios"
-nagiosinfo=`ls -l $nagiosfile 2>>$logs/install.log`
-nagiosuser="$(echo "$nagiosinfo" | sed -rn "s/^-\S+ [0-9]+ (\S+) .*/\1/gp" 2>>$logs/install.log)"
-wwwgroup="$(echo "$nagiosinfo" | sed -rn "s/^-\S+ [0-9]+ (\S+) (\S+).*/\2/gp" 2>>$logs/install.log)"
+if [ cmkversion$NAGIOS_CHECKMK_VERSION == cmkversion'1_4' ] || [ cmkversion$NAGIOS_CHECKMK_VERSION == cmkversion'1_5' ]; then 
+    nagiosdir=$NAGIOSHOME
+    nagiosfile="/omd/sites/$siteUser/bin/nagios"
+    nagiosinfo=`ls -l $nagiosfile 2>>$logs/install.log`
+    nagiosuser=$siteUser
+    wwwgroup=$siteGroup
+else
+    nagiosdir="$(ps -ef | grep -E 'nagios.cfg|icinga.cfg' | grep -v grep | sed -rn "s/.* (\/.+)\/etc.*/\1/gp" |uniq 2>>$logs/install.log)"
+    nagiosfile="$nagiosdir/bin/nagios"
+    nagiosinfo=`ls -l $nagiosfile 2>>$logs/install.log`
+    nagiosuser="$(echo "$nagiosinfo" | sed -rn "s/^-\S+ [0-9]+ (\S+) .*/\1/gp" 2>>$logs/install.log)"
+    wwwgroup="$(echo "$nagiosinfo" | sed -rn "s/^-\S+ [0-9]+ (\S+) (\S+).*/\2/gp" 2>>$logs/install.log)"
+fi
 
 if [ -f "$logs/install.log" ]
 then
@@ -53,8 +76,10 @@ read todo
 
 if [ "$todo" = "y" ]
 then
-  #echo "check if nagios plugin is installed in this machine"
-  nagiosplugin="$nagiosdir/libexec/huawei_server/trapdcheck.sh"
+   #echo "check if nagios plugin is installed in this machine"
+  
+   nagiosplugin="$nagiosdir/libexec/huawei_server/trapdcheck.sh"
+
   if [ -f "$nagiosplugin" ]
   then
       echo "$datetime Huawei Nagios Plugin----OK" |tee -a $logs/install.log
@@ -151,7 +176,7 @@ then
                      'num_columns': 1,
                      'owner': 'nagiosadmin',
                      'painters': [('service_state', None, None),
-                                  ('service_description', None, None),
+                                  ('service_description', 'service', None),
                                   ('svc_plugin_output', None, None),
                                   ('svc_state_age', None, None),
                                   ('svc_check_age', None, None)],
@@ -160,7 +185,7 @@ then
                      'single_infos': [],
                      'sorters': [('site', False)],
                      'title': u'Huawei High Density Server',
-                     'topic': u'Huawei Nagios Plugin Views',
+                     'topic': u'Huawei Server Views',
                      'user_sortable': True},
  'agg_alarm': {'browser_reload': 0,
                'column_headers': 'pergroup',
@@ -183,7 +208,7 @@ then
                'painters': [('service_state', None, None),
                             ('host', 'host_export', None),
                             ('host_address', None, None),
-                            ('service_description', None, None),
+                            ('service_description', 'service', None),
                             ('svc_plugin_output', None, None),
                             ('svc_state_age', None, None),
                             ('svc_check_age', None, None)],
@@ -193,7 +218,7 @@ then
                'sorters': [('inv_software_applications_citrix_vm_desktop_group_name',
                             False)],
                'title': u'Alarm',
-               'topic': u'Huawei Nagios Plugin Views',
+               'topic': u'Huawei Server Views',
                'user_sortable': True},
  'agg_blade': {'browser_reload': 0,
                'column_headers': 'pergroup',
@@ -215,7 +240,7 @@ then
                'num_columns': 1,
                'owner': 'nagiosadmin',
                'painters': [('service_state', None, None),
-                            ('service_description', None, None),
+                            ('service_description', 'service', None),
                             ('svc_plugin_output', None, None),
                             ('svc_state_age', None, None),
                             ('svc_check_age', None, None)],
@@ -224,7 +249,7 @@ then
                'single_infos': [],
                'sorters': [('site_host', False)],
                'title': u'Huawei Blade Server',
-               'topic': u'Huawei Nagios Plugin Views',
+               'topic': u'Huawei Server Views',
                'user_sortable': True},
  'agg_listener': {'browser_reload': 0,
                   'column_headers': 'pergroup',
@@ -246,14 +271,14 @@ then
                   'owner': 'nagiosadmin',
                   'painters': [('service_state', None, None),
                                ('host', 'host_export', None),
-                               ('service_description', None, None),
+                               ('service_description', 'service', None),
                                ('svc_plugin_output', None, None)],
                   'play_sounds': False,
                   'public': False,
                   'single_infos': [],
                   'sorters': [],
                   'title': u'Listener Status',
-                  'topic': u'Huawei Nagios Plugin Views',
+                  'topic': u'Huawei Server Views',
                   'user_sortable': True},
  'agg_problems': {'browser_reload': 0,
                   'column_headers': 'pergroup',
@@ -279,7 +304,7 @@ then
                   'painters': [('service_state', None, None),
                                ('host', 'host_export', None),
                                ('host_address', None, None),
-                               ('service_description', None, None),
+                               ('service_description', 'service', None),
                                ('svc_plugin_output', None, None),
                                ('svc_state_age', None, None),
                                ('svc_check_age', None, None)],
@@ -289,7 +314,7 @@ then
                   'sorters': [('inv_networking_wlan_controller', True),
                               ('svcstate', False)],
                   'title': u'Service Problems',
-                  'topic': u'Huawei Nagios Plugin Views',
+                  'topic': u'Huawei Server Views',
                   'user_sortable': True},
  'agg_rack': {'browser_reload': 0,
               'column_headers': 'pergroup',
@@ -310,7 +335,7 @@ then
               'name': 'agg_rack',
               'num_columns': 1,
               'painters': [('service_state', None, None),
-                           ('service_description', None, None),
+                           ('service_description', 'service', None),
                            ('svc_plugin_output', None, None),
                            ('svc_state_age', None, None),
                            ('svc_check_age', None, None)],
@@ -319,28 +344,39 @@ then
               'single_infos': [],
               'sorters': [('wato_folder_abs', False)],
               'title': u'Huawei Rack Server',
-              'topic': u'Huawei Nagios Plugin Views',
+              'topic': u'Huawei Server Views',
               'user_sortable': True}"
-   # create Huawei Nagios plugin views to user_views.mk
-   if [ -f "$vardir/web/nagiosadmin/user_views.mk" ]; then
-       cp $vardir/web/nagiosadmin/user_views.mk  $cmkdir/uninstall/updates |tee -a $logs/install.log
-       if [ -z "$(cat $vardir/web/nagiosadmin/user_views.mk | grep 'topic' 2>>$logs/install.log)" ]
+   # create Huawei Server Views to user_views.mk
+   if [ cmkversion$NAGIOS_CHECKMK_VERSION == cmkversion'1_4' ] || [ cmkversion$NAGIOS_CHECKMK_VERSION == cmkversion'1_5' ]; then 
+        viewfile=$vardir/web/cmkadmin/user_views.mk
+        viewdir=$vardir/web/cmkadmin
+   else
+        viewfile=$vardir/web/nagiosadmin/user_views.mk
+        viewdir=$vardir/web/nagiosadmin
+   fi
+   if [ -f "$viewfile" ]; then
+       cp $viewfile  $cmkdir/uninstall/updates |tee -a $logs/install.log
+       if [ -z "$(cat $viewfile | grep 'topic' 2>>$logs/install.log)" ]
        then
-            echo "{$huawei_views}" > $vardir/web/nagiosadmin/user_views.mk &&
-            chown $wwwgroup.$nagiosuser $vardir/web/nagiosadmin/user_views.mk &&
-            chmod 664 $vardir/web/nagiosadmin/user_views.mk
+            echo "{$huawei_views}" > $viewfile &&
+            chown $wwwgroup.$nagiosuser $viewfile &&
+            chmod 664 $viewfile
        fi
 
-       if [ -z "$(cat $vardir/web/nagiosadmin/user_views.mk | grep 'Huawei Nagios Plugin Views')" ] && [ ! -z "$(cat $vardir/web/nagiosadmin/user_views.mk | grep 'topic')" ]
+       if [ -z "$(cat $viewfile | grep 'Huawei Server Views')" ] && [ ! -z "$(cat $vardir/web/nagiosadmin/user_views.mk | grep 'topic')" ]
        then
-            sed -i '$s/}$/,/' $vardir/web/nagiosadmin/user_views.mk 2>>$logs/install.log
-            echo "$huawei_views}" >> $vardir/web/nagiosadmin/user_views.mk
+            sed -i '$s/}$/,/' $viewfile 2>>$logs/install.log
+            echo "$huawei_views}" >> $viewfile
        fi
   else
-       mkdir -p $vardir/web/nagiosadmin &&
-       echo "{$huawei_views}" > $vardir/web/nagiosadmin/user_views.mk &&
-       chown $wwwgroup.$nagiosuser $vardir/web/nagiosadmin/user_views.mk |tee -a $logs/install.log&&
-       chmod 664 $vardir/web/nagiosadmin/user_views.mk |tee -a $logs/install.log
+       mkdir -p $viewdir &&
+       if [ cmkversion$NAGIOS_CHECKMK_VERSION == cmkversion'1_4' ] || [ cmkversion$NAGIOS_CHECKMK_VERSION == cmkversion'1_5' ]; then 
+       chown $wwwgroup.$nagiosuser $viewdir
+       fi
+
+       echo "{$huawei_views}" > $viewfile &&
+       chown $wwwgroup.$nagiosuser $viewfile |tee -a $logs/install.log&&
+       chmod 664 $viewfile |tee -a $logs/install.log
   fi
   
   # setup check_mk pluin UI
@@ -355,7 +391,13 @@ then
   fi
   # check if cmk plusin setup successfully.
   if [ -f "$modulesdir/huawei_auto_config.py" ]; then
-      service nagios restart |tee -a $logs/install.log&&
+      if [ cmkversion$NAGIOS_CHECKMK_VERSION == cmkversion'1_4' ] || [ cmkversion$NAGIOS_CHECKMK_VERSION == cmkversion'1_5' ]; then 
+          #更改modules 文件夹目录
+          chmod  -R 777 $modulesdir
+          omd restart |tee -a $logs/install.log
+      else
+          service nagios restart |tee -a $logs/install.log
+      fi
       echo -e "$datetime Installation completed successfully.\n$datetime Please restart apache/httpd" |tee -a $logs/install.log
   else
       echo -e "$datetime installed Failed!" |tee -a $logs/install.log
