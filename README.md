@@ -17,11 +17,14 @@ II. Description
 III.Supported Software Version
 
     Check_MK 1.2.8p26
+    Check_MK 1.4.0
     
 IV.Software Requirements
 
-    Nagios Plugin for Huawei Server
-    https://github.com/Huawei/Server_Management_Plugin_Nagios
+    Python 2.7.13    
+    pysnmp-4.2.4  
+    pyasn1-0.1.6    
+    pycrypto-2.3
     
 V.Supported Device
 
