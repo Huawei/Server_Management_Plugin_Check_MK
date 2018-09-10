@@ -4,11 +4,13 @@ SRCDIR=$(cd `dirname $0`; pwd)
 cmkdir="$(echo "$SRCDIR" | sed -rn "s/(.+)\/build/\1/gp")"
 #datetime=$(date "+%Y-%m-%d-%H-%M-%S")
 #echo $datetime
-rm -rf $cmkdir/releases/* && mkdir -p $cmkdir/releases/cmkplugin_latest &&
-cd $cmkdir/src/modules && tar zcf modulesplugin.tar.gz *.py  huawei_server && mv modulesplugin.tar.gz $cmkdir/releases/cmkplugin_latest/ &&
+#tarname=cmkplugin_$1
+tarname=$1
+rm -rf $cmkdir/releases/* && mkdir -p $cmkdir/releases/$tarname &&
+cd $cmkdir/src/modules && tar zcf modulesplugin.tar.gz *.py  huawei_server && mv modulesplugin.tar.gz $cmkdir/releases/$tarname/ &&
 chmod a+x $SRCDIR/{setup.sh,uninstall.sh} &&
-cp $SRCDIR/{setup.sh,uninstall.sh,setup.py} $cmkdir/releases/cmkplugin_latest/ &&
-cp -rf $SRCDIR/../lib/*  $cmkdir/releases/cmkplugin_latest/ &&
+cp $SRCDIR/{setup.sh,uninstall.sh,setup.py} $cmkdir/releases/$tarname/ &&
+cp -rf $SRCDIR/../lib/*  $cmkdir/releases/$tarname/ &&
 cd $cmkdir/releases &&
-tar zcf cmkplugin_latest.tar.gz cmkplugin_latest &&
-rm -rf $cmkdir/releases/cmkplugin_latest
+tar zcvf $tarname.tar $tarname &&
+rm -rf $cmkdir/releases/$tarname
