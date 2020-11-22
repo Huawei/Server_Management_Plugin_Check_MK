@@ -1,0 +1,12 @@
+title: huawei Server hmm
+agents: snmp
+license: GPL
+distribution: 
+description:
+ This check monitors the huawei hmm switch status by SNMP.
+
+inventory:
+ One service is created if a huawei hmm is detected.
+
+item:
+ switch status 

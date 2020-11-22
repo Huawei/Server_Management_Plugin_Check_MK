@@ -1,0 +1,12 @@
+title: Huawei IBMC Server
+agents: snmp
+license: GPL
+distribution: 
+description:
+ This check monitors the Huawei IBMC Server Needs Attention flag by SNMP.
+
+inventory:
+ One service is created if a Huawei IBMC Server disk is detected.
+
+item:
+ Disk health status
