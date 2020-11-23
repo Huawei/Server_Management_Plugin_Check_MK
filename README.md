@@ -21,10 +21,12 @@ III.Supported Software Version
     
 IV.Software Requirements
 
-    Python 2.7.13 (V2 is also compatible with Python 3.7)    
+    v1: Python 2.7.13 
+    V2: Python 2.7.13 or later, 3.7 or later   
     pysnmp-4.2.4  
     pyasn1-0.1.6    
     pycrypto-2.3
+    
     
 V.Supported Device
 
