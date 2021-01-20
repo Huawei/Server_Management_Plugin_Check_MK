@@ -21,12 +21,12 @@ def inventory_hw_raid_health(info):
 def check_hw_raid_health(item, params, info):
     _health_status = 2
     _msg = ""
-    all_health = []
     try:
+        all_health = []
         for index, raid_state, bbu_state, bbu_present in info[0]:
             raid_health = _health_map.get(raid_state)
             if raid_health is None:
-                _msg += "Raid%s healthy status is UNKNOWN " % index
+                _msg += "Raid%s healthy status is UNKNOWN, " % index
                 all_health.append(1)
             else:
                 _msg += "Raid%s healthy status is %s " % (index, _health_str.get(raid_health))
@@ -37,7 +37,7 @@ def check_hw_raid_health(item, params, info):
                     bbu_health_msg = "OK"
                 else:
                     bbu_health_msg = "WARNING"
-                _msg += "BBU%s health is %s. " % (index, _health_msg)
+                _msg += "BBU%s health is %s. " % (index, bbu_health_msg)
             elif present == "1":
                 _msg += "BBU%s in-position status is ABSENT. " % index
             else:
