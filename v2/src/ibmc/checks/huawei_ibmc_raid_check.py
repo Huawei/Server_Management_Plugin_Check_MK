@@ -38,7 +38,7 @@ def check_hw_raid_health(item, params, info):
                 else:
                     bbu_health_msg = "WARNING"
                 _msg += "BBU%s health is %s. " % (index, bbu_health_msg)
-            elif present == "1":
+            elif bbu_present == "1":
                 _msg += "BBU%s in-position status is ABSENT. " % index
             else:
                 _msg += "BBU%s in-position status is UNKNOWN. " % index
