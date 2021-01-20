@@ -13,7 +13,7 @@
 
 
 _health_map = {"1": 0, "2": 1, "3": 1, "4": 2, "5": 3, "6": 3}
-_health_str = {0: "OK", 1: "WARNING", 2: "CRITICAL", 3: "UNKOWN"}
+_health_str = {0: "OK", 1: "WARNING", 2: "CRITICAL", 3: "ABSENCE", 4: "UNKOWN"}
 
 def inventory_hw_memory_health(info):
     return [('MEMORY status', None)]
@@ -27,6 +27,8 @@ def check_hw_memory_health(item, params, info):
         for state, index in info[1]:
             _each_status = _health_map.get(state)
             if _each_status is not None:
+                if _each_status == 3:
+                    continue
                 _health_msg = _health_str.get(_each_status)
                 _msg = _msg + " %s health status is %s;" % (str(index), _health_msg)
         return _health_status, "healthy status is %s, %s" % (_health_str.get(_health_status), _msg)

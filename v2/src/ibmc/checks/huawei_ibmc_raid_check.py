@@ -21,25 +21,29 @@ def inventory_hw_raid_health(info):
 def check_hw_raid_health(item, params, info):
     _health_status = 2
     _msg = ""
+    all_health = []
     try:
-        for state in info[0][0]:
-            _health = _health_map.get(state)
-            if _health:
-                _health_status = _health
-
-        for state, present in info[1]:
-            if present == "2":
-                _health = _health_map.get(state)
-                if state == "0":
-                    _health_msg = "OK"
-                else:
-                    _health_msg = "WARNING"
-                _msg = "BBU health is %s." % _health_msg
-            elif present == "1":
-                _msg = "BBU in-position status is ABSENT."
+        for index, raid_state, bbu_state, bbu_present in info[0]:
+            raid_health = _health_map.get(raid_state)
+            if raid_health is None:
+                _msg += "Raid%s healthy status is UNKNOWN " % index
+                all_health.append(1)
             else:
-                _msg = "BBU in-position status is UNKNOWN."
-        return _health_status, "Raid healthy status is %s, %s" % (_health_str.get(_health_status), _msg)
+                _msg += "Raid%s healthy status is %s " % (index, _health_str.get(raid_health))
+                all_health.append(raid_health)
+
+            if bbu_present == "2":
+                if bbu_state == "0":
+                    bbu_health_msg = "OK"
+                else:
+                    bbu_health_msg = "WARNING"
+                _msg += "BBU%s health is %s. " % (index, _health_msg)
+            elif present == "1":
+                _msg += "BBU%s in-position status is ABSENT. " % index
+            else:
+                _msg += "BBU%s in-position status is UNKNOWN. " % index
+            _health_status = max(all_health)
+        return _health_status, _msg
     
     except IndexError:
         return "Raid healthy status is not queried"
@@ -50,8 +54,7 @@ check_info["huawei_ibmc_raid_check"] = {
     "service_description": "%s",
     "includes": ["huawei_ibmc_util_.include"],
     "snmp_info": [
-        (".1.3.6.1.4.1.2011.2.235.1.1.36", ["50.1.7", ]),
-        (".1.3.6.1.4.1.2011.2.235.1.1.36", ["50.1.18", "50.1.16"])
+        (".1.3.6.1.4.1.2011.2.235.1.1.36", ["50.1.1", "50.1.7", "50.1.18", "50.1.16"])
     ],
     "snmp_scan_function": scan,
 }

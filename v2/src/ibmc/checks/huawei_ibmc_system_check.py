@@ -25,7 +25,7 @@ def check_hw_system_health(item, params, info):
     for state, model in info:
         _health = _health_map.get(state)
         _health_msg = _health_str.get(_health)
-        _msg = _msg + "server type is %s health is %s" % (str(model), _health_msg )
+        _msg = _msg + "server name is %s health is %s" % (str(model), _health_msg )
     return _health, _msg
 
 
@@ -36,7 +36,7 @@ check_info["huawei_ibmc_system_check"] = {
     "includes": ["huawei_ibmc_util_.include"],
     "snmp_info": (
         ".1.3.6.1.4.1.2011.2.235.1.1.1",
-        ["12.0", "6.0", ]
+        ["1.0", "6.0", ]
     ),
     "snmp_scan_function": scan,
 }
